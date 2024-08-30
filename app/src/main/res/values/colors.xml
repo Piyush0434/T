@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="colorPrimary">#CDDC38</color>
+    <color name="colorPrimaryDark">#33136D</color>
+    <color name="colorAccent">#D963ED</color>
+    <color name="nav_header">#FFEAA00C</color>
+    <color name="toolbar_color">#7FDB4D</color>
+    <color name="dashboard_color">#FF9B6309</color>
+    <color name="income_color">#FF240740</color>
+    <color name="expense_color">#FF6C042E</color>
+    <color name="date_color">#FF270648</color>
+    <color name="expense_amount">#FFEC1D06</color>
+</resources>
