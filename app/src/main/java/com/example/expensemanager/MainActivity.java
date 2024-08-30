@@ -2,6 +2,7 @@ package com.example.expensemanager;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -10,9 +11,13 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.Manifest;
+
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -34,6 +39,9 @@ public class MainActivity extends AppCompatActivity {
 
     private ProgressDialog mDialog;
 
+    //for sms
+    private static final int SMS_PERMISSION_CODE = 100;
+
     //Firebase
 
     private FirebaseAuth mAuth;
@@ -44,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        checkAndRequestPermission();
+
         mAuth=FirebaseAuth.getInstance();
 
         if(mAuth.getCurrentUser()!=null){
@@ -53,6 +63,20 @@ public class MainActivity extends AppCompatActivity {
         mDialog=new ProgressDialog(this);
         loginDetails();
     }
+
+    private void checkAndRequestPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, SMS_PERMISSION_CODE);
+        } else {
+            // Permission already granted
+            initializeSmsReceiver();
+        }
+    }
+
+    private void initializeSmsReceiver() {
+        Toast.makeText(this, "SMS Receiver Initialized.", Toast.LENGTH_SHORT).show();
+    }
+
 
     private void loginDetails(){
         mEmail = findViewById(R.id.email_login);
