@@ -1,7 +1,10 @@
 package com.example.expensemanager;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -43,16 +46,16 @@ public class MainActivity extends AppCompatActivity {
     private static final int SMS_PERMISSION_CODE = 100;
 
     //Firebase
-
     private FirebaseAuth mAuth;
+
+    //broadcast sms
+    private BroadcastReceiver smsReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-
-        checkAndRequestPermission();
 
         mAuth=FirebaseAuth.getInstance();
 
@@ -62,19 +65,58 @@ public class MainActivity extends AppCompatActivity {
 
         mDialog=new ProgressDialog(this);
         loginDetails();
+        checkAndRequestPermission();
     }
 
     private void checkAndRequestPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, SMS_PERMISSION_CODE);
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_SMS)){
+                showPermissionExplanationDialog();
+            }
+            else{
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, SMS_PERMISSION_CODE);
+            }
         } else {
             // Permission already granted
             initializeSmsReceiver();
         }
     }
 
+    private void showPermissionExplanationDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("SMS permission is needed")
+                .setMessage("This app requires SMS permission to automatically detect and update your expenses.")
+                .setPositiveButton("Allow", (dialog, which) ->
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_SMS}, SMS_PERMISSION_CODE))
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .create()
+                .show();
+    }
+
     private void initializeSmsReceiver() {
         Toast.makeText(this, "SMS Receiver Initialized.", Toast.LENGTH_SHORT).show();
+        smsReceiver = new smsReceiver();
+        registerReceiver(smsReceiver, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (smsReceiver != null) {
+            unregisterReceiver(smsReceiver);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == SMS_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initializeSmsReceiver(); // **Updated**: Initialize the SMS receiver when the permission is granted.
+            } else {
+                Toast.makeText(this, "SMS Permission Denied. Please enable it from settings.", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
 

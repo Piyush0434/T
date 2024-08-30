@@ -21,6 +21,8 @@ import android.widget.Toast;
 import com.example.expensemanager.Model.Data;
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.firebase.ui.database.FirebaseRecyclerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -255,7 +257,6 @@ public class IncomeFragment extends Fragment {
 
                 String mDate= DateFormat.getDateInstance().format(new Date());
                 Data data=new Data(myAmmount,type,note,post_key,mDate);
-
                 mIncomeDatabase.child(post_key).setValue(data);
                 dialog.dismiss();;
             }
