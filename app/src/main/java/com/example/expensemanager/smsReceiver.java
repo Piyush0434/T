@@ -3,72 +3,83 @@ package com.example.expensemanager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.telephony.SmsMessage;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+interface OnAmountReceivedListener {
+    void onAmountReceived(int amount);
+}
 
 public class smsReceiver extends BroadcastReceiver {
     private static final String TAG = "SmsReceiver";
-    private static final int SMS_PERMISSION_CODE = 1000;
+    private OnAmountReceivedListener listener;
 
+    public void setOnAmountReceivedListener(OnAmountReceivedListener listener) {
+        this.listener = listener;
+    }
     @Override
     public void onReceive(Context context, Intent intent) {
-        if(intent.getAction() != null && intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED")){
-            Object[] pdus = (Object[]) intent.getExtras().get("pdus");
-            if (pdus != null) {
-                for (Object pdu : pdus) {
-                    SmsMessage smsMessage = SmsMessage.createFromPdu((byte[]) pdu);
-                    String messageBody = smsMessage.getMessageBody();
-                    String sender = smsMessage.getOriginatingAddress();
+        Bundle bundle = intent.getExtras();
+        SmsMessage[] messages = null;
+        String str = "";
 
-                    // Log the SMS content
-                    Log.d(TAG, "SMS from: " + sender + " - " + messageBody);
+        if(bundle != null){
+            Object[] pdus = (Object[]) bundle.get("pdus");
+            messages = new SmsMessage[pdus.length];
 
-                    // Process the message to update balance
-                    processSmsMessage(context, messageBody);
+            for (int i = 0; i < messages.length; i++) {
+                messages[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
+                str += "SMS from " + messages[i].getOriginatingAddress();
+                str += " :";
+                str += messages[i].getMessageBody().toString();
+                str += "\n";
+
+                Pattern creditPattern = Pattern.compile(" your A/c (\\w+)-(credited) by Rs.(\\d+) on (\\d{2}([a-zA-Z]{3}|[a-zA-Z]{4}))\\d{2} transfer from (.*) Ref No (\\d+)");
+                Matcher creditMatcher = creditPattern.matcher(messages[i].getMessageBody());
+
+                Pattern debitPattern = Pattern.compile("A/C (\\w+) debited by (\\d+\\.\\d+) on date (\\d{2}[a-zA-Z]{3}\\d{2}) trf to (.*) Refno (\\d+)");
+                Matcher debitMatcher = debitPattern.matcher(messages[i].getMessageBody());
+
+                if (creditMatcher.find()) {
+                    String accountNumber = creditMatcher.group(1);
+                    String transactionType = creditMatcher.group(2);
+                    int amount = Integer.parseInt(creditMatcher.group(3));
+                    String date = creditMatcher.group(4);
+                    String transferFrom = creditMatcher.group(6);
+                    String refNumber = creditMatcher.group(7);
+
+                    if (listener != null) {
+                        listener.onAmountReceived(amount);
+                    }
+                    // Process the extracted information
+                    String toastMessage = "Account: " + accountNumber +
+                            "Type: " + transactionType + "\n" +
+                            "Amount: Rs." + amount + "\n" ;
+
+                    Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show();
+                } else if (debitMatcher.find()) {
+                    String accountNumber = debitMatcher.group(1);
+                    int amount = Integer.parseInt(debitMatcher.group(2));
+                    String date = debitMatcher.group(3);
+                    String transferTo = debitMatcher.group(4);
+                    String refNumber = debitMatcher.group(5);
+
+                    if (listener != null) {
+                        listener.onAmountReceived(amount);
+                    }
+
+                    String toastMessage = "Account: " + accountNumber +
+                            "Type: Debited\n" +
+                            "Amount: Rs." + amount + "\n";
+
+                    Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show();
                 }
             }
         }
     }
-    //checking message if it is contain credited and debited keywords
-    private void processSmsMessage(Context context, String messageBody) {
-        if(messageBody.contains("credited")){
-            int amount = extractAmountFromMessage(messageBody, "credited");
-            updateBalance(context, amount, true);
-        } else if (messageBody.contains("debited")) {
-            int amount = extractAmountFromMessage(messageBody, "debited");
-            updateBalance(context, amount, false);
-        }
-    }
-
-    //extract the amount from messages
-    private  int extractAmountFromMessage(String messageBody, String transactionType){
-        String amountString = "";
-        if(transactionType.equals("credited")){
-            amountString = messageBody.replaceAll(".*credited by Rs\\.(\\d+(\\.\\d+)?).*", "$1");
-        }else if(transactionType.equals("debited")){
-            amountString = messageBody.replaceAll(".*debited by (\\d+(\\.\\d+)?).*", "$1");
-        }
-
-        try {
-            return (int) Double.parseDouble(amountString);
-        }catch (NumberFormatException e){
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
-    private void updateBalance(Context context, int amount, boolean isCredit) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("ExpenseManagerPrefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        int currentBalance = sharedPreferences.getInt("balance", 0);
-        int newBalance = isCredit ? currentBalance + amount : currentBalance - amount; // Update balance
-        editor.putInt("balance", newBalance);
-        editor.apply();
-
-        Toast.makeText(context, "Balance updated: " + newBalance, Toast.LENGTH_SHORT).show();
-    }
-
 }

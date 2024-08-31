@@ -1,12 +1,13 @@
 package com.example.expensemanager;
 
-import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.Telephony;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -29,8 +30,12 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.FirebaseDatabase;
 
 import org.w3c.dom.Text;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -39,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnLogin;
     private TextView mForgetPassword;
     private TextView mSignupHere;
+    private smsReceiver smsReceiver;
 
     private ProgressDialog mDialog;
 
@@ -48,8 +54,6 @@ public class MainActivity extends AppCompatActivity {
     //Firebase
     private FirebaseAuth mAuth;
 
-    //broadcast sms
-    private BroadcastReceiver smsReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,60 +69,15 @@ public class MainActivity extends AppCompatActivity {
 
         mDialog=new ProgressDialog(this);
         loginDetails();
-        checkAndRequestPermission();
-    }
 
-    private void checkAndRequestPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-            if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_SMS)){
-                showPermissionExplanationDialog();
-            }
-            else{
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, SMS_PERMISSION_CODE);
-            }
-        } else {
-            // Permission already granted
-            initializeSmsReceiver();
-        }
-    }
 
-    private void showPermissionExplanationDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("SMS permission is needed")
-                .setMessage("This app requires SMS permission to automatically detect and update your expenses.")
-                .setPositiveButton("Allow", (dialog, which) ->
-                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_SMS}, SMS_PERMISSION_CODE))
-                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
-                .create()
-                .show();
-    }
-
-    private void initializeSmsReceiver() {
-        Toast.makeText(this, "SMS Receiver Initialized.", Toast.LENGTH_SHORT).show();
         smsReceiver = new smsReceiver();
-        registerReceiver(smsReceiver, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
+        IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
+        registerReceiver(smsReceiver, filter);
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (smsReceiver != null) {
-            unregisterReceiver(smsReceiver);
-        }
-    }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == SMS_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initializeSmsReceiver(); // **Updated**: Initialize the SMS receiver when the permission is granted.
-            } else {
-                Toast.makeText(this, "SMS Permission Denied. Please enable it from settings.", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
+    private static final int READ_SMS_PERMISSION_CODE =100;
 
     private void loginDetails(){
         mEmail = findViewById(R.id.email_login);

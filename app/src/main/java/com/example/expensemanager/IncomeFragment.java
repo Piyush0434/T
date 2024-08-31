@@ -2,6 +2,7 @@ package com.example.expensemanager;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.content.IntentFilter;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -36,7 +37,7 @@ import java.util.Date;
 import java.util.Objects;
 
 
-public class IncomeFragment extends Fragment {
+public class IncomeFragment extends Fragment implements OnAmountReceivedListener {
 
    //Firebase database
     private FirebaseAuth mAuth;
@@ -134,6 +135,10 @@ public class IncomeFragment extends Fragment {
     public void onStart() {
         super.onStart();
 
+        smsReceiver receiver = new smsReceiver();
+        receiver.setOnAmountReceivedListener(this);
+
+        getActivity().registerReceiver(receiver, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
 
         FirebaseRecyclerOptions<Data> options =
                 new FirebaseRecyclerOptions.Builder<Data>()
@@ -179,6 +184,16 @@ public class IncomeFragment extends Fragment {
         super.onStop();
         adapter.stopListening();
     }
+
+    @Override
+    public void onAmountReceived(int amount) {
+        String mDate = DateFormat.getDateInstance().format(new Date());
+        String post_key = mIncomeDatabase.push().getKey(); // Generate a unique key for the entry
+        Data data = new Data(amount, "Credit", "Received via SMS", post_key, mDate);
+        mIncomeDatabase.child(post_key).setValue(data);
+        Toast.makeText(getActivity(), "Income updated with Rs." + amount, Toast.LENGTH_SHORT).show();
+    }
+
     public static class MyViewHolder extends RecyclerView.ViewHolder{
 
         TextView mType, mNote, mDate, mAmmount;
@@ -193,6 +208,7 @@ public class IncomeFragment extends Fragment {
             mDate=mView.findViewById(R.id.date_txt_income);
             mAmmount=mView.findViewById(R.id.ammount_txt_income);
         }
+
 
         private void setType(String type){
             mType.setText(type);

@@ -261,20 +261,20 @@ public class DashBoardFragment extends Fragment {
                 String amount=edtAmount.getText().toString().trim();
                 String note=edtNote.getText().toString().trim();
 
-                if(TextUtils.isEmpty(type)){
-                    edtType.setError("Required Field...");
-                    return;
-                }
+//                if(TextUtils.isEmpty(type)){
+//                    edtType.setError("Required Field...");
+//                    return;
+//                }
                 if(TextUtils.isEmpty(amount)){
                     edtAmount.setError("Required Field...");
                     return;
                 }
                 int ouramountint=Integer.parseInt(amount);
 
-                if(TextUtils.isEmpty(note)){
-                    edtNote.setError("Required Field...");
-                    return;
-                }
+//                if(TextUtils.isEmpty(note)){
+//                    edtNote.setError("Required Field...");
+//                    return;
+//                }
 
                 String id=mIncomeDatabase.push().getKey();
 
