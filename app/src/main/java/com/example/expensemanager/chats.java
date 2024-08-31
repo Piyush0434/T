@@ -66,6 +66,7 @@ public class chats extends AppCompatActivity {
     public static final MediaType JSON
             = MediaType.get("application/json; charset=utf-8");
     OkHttpClient client = new OkHttpClient();
+    private int i;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
